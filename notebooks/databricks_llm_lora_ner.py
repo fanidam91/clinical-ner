@@ -43,6 +43,9 @@ dbutils.widgets.text("epochs", "3", "Epochs")
 dbutils.widgets.text("lora_r", "8", "LoRA Rank (r)")
 dbutils.widgets.text("lora_alpha", "16", "LoRA Alpha")
 dbutils.widgets.text("mlflow_experiment", "/Shared/clinical_llm_lora_ner", "MLflow Experiment Name")
+dbutils.widgets.dropdown("use_unity_catalog", "false", ["true", "false"], "Use Unity Catalog Model Registry")
+dbutils.widgets.text("unity_catalog_name", "main", "Unity Catalog Name")
+dbutils.widgets.text("unity_catalog_schema", "default", "Unity Catalog Schema")
 
 # COMMAND ----------
 # Load variables from widgets
@@ -53,6 +56,9 @@ epochs = int(dbutils.widgets.get("epochs"))
 lora_r = int(dbutils.widgets.get("lora_r"))
 lora_alpha = int(dbutils.widgets.get("lora_alpha"))
 mlflow_experiment = dbutils.widgets.get("mlflow_experiment")
+use_unity_catalog = dbutils.widgets.get("use_unity_catalog") == "true"
+unity_catalog_name = dbutils.widgets.get("unity_catalog_name")
+unity_catalog_schema = dbutils.widgets.get("unity_catalog_schema")
 
 print(f"Model Name: {model_name}")
 print(f"Learning Rate: {learning_rate}")
@@ -61,6 +67,9 @@ print(f"Epochs: {epochs}")
 print(f"LoRA Rank (r): {lora_r}")
 print(f"LoRA Alpha: {lora_alpha}")
 print(f"MLflow Experiment: {mlflow_experiment}")
+print(f"Use Unity Catalog: {use_unity_catalog}")
+if use_unity_catalog:
+    print(f"Unity Catalog Path: {unity_catalog_name}.{unity_catalog_schema}")
 
 # COMMAND ----------
 # MAGIC %md
@@ -255,10 +264,19 @@ with mlflow.start_run(run_name="llm_lora_run") as run:
             f.write(f"Sample {idx + 1}\nRef: {ref}\nPred: {pred}\n\n")
     mlflow.log_artifact(predictions_path)
     
+    # Configure Unity Catalog Registry if enabled
+    if use_unity_catalog:
+        mlflow.set_registry_uri("databricks-uc")
+        registered_name = f"{unity_catalog_name}.{unity_catalog_schema}.clinical_llm_lora_model"
+        print(f"Registering model adapter to Unity Catalog: {registered_name}")
+    else:
+        registered_name = "clinical_llm_lora_model"
+        print(f"Registering model adapter to Workspace Registry: {registered_name}")
+
     # Save/register the LoRA model adapter
     mlflow.pytorch.log_model(
         pytorch_model=trainer.model,
         artifact_path="lora_adapter",
-        registered_model_name="clinical_llm_lora_model"
+        registered_model_name=registered_name
     )
-    print("Training finished. LoRA adapter successfully registered to MLflow Model Registry.")
+    print(f"Training finished. LoRA adapter successfully registered as: {registered_name}")

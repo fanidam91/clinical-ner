@@ -35,6 +35,9 @@ dbutils.widgets.text("learning_rate", "2e-5", "Learning Rate")
 dbutils.widgets.text("batch_size", "16", "Batch Size")
 dbutils.widgets.text("epochs", "3", "Epochs")
 dbutils.widgets.text("mlflow_experiment", "/Shared/clinical_bert_ner", "MLflow Experiment Name")
+dbutils.widgets.dropdown("use_unity_catalog", "false", ["true", "false"], "Use Unity Catalog Model Registry")
+dbutils.widgets.text("unity_catalog_name", "main", "Unity Catalog Name")
+dbutils.widgets.text("unity_catalog_schema", "default", "Unity Catalog Schema")
 
 # COMMAND ----------
 # Load variables from widgets
@@ -43,12 +46,18 @@ learning_rate = float(dbutils.widgets.get("learning_rate"))
 batch_size = int(dbutils.widgets.get("batch_size"))
 epochs = int(dbutils.widgets.get("epochs"))
 mlflow_experiment = dbutils.widgets.get("mlflow_experiment")
+use_unity_catalog = dbutils.widgets.get("use_unity_catalog") == "true"
+unity_catalog_name = dbutils.widgets.get("unity_catalog_name")
+unity_catalog_schema = dbutils.widgets.get("unity_catalog_schema")
 
 print(f"Model Name: {model_name}")
 print(f"Learning Rate: {learning_rate}")
 print(f"Batch Size: {batch_size}")
 print(f"Epochs: {epochs}")
 print(f"MLflow Experiment: {mlflow_experiment}")
+print(f"Use Unity Catalog: {use_unity_catalog}")
+if use_unity_catalog:
+    print(f"Unity Catalog Path: {unity_catalog_name}.{unity_catalog_schema}")
 
 # COMMAND ----------
 # MAGIC %md
@@ -234,10 +243,19 @@ with mlflow.start_run(run_name="bert_ner_run") as run:
         f.write(classification_report)
     mlflow.log_artifact(report_path)
     
+    # Configure Unity Catalog Registry if enabled
+    if use_unity_catalog:
+        mlflow.set_registry_uri("databricks-uc")
+        registered_name = f"{unity_catalog_name}.{unity_catalog_schema}.clinical_bert_ner_model"
+        print(f"Registering model to Unity Catalog: {registered_name}")
+    else:
+        registered_name = "clinical_bert_ner_model"
+        print(f"Registering model to Workspace Registry: {registered_name}")
+
     # Log and register the PyTorch model
     mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path="model",
-        registered_model_name="clinical_bert_ner_model"
+        registered_model_name=registered_name
     )
-    print("Training finished. Model successfully registered to MLflow Model Registry.")
+    print(f"Training finished. Model successfully registered as: {registered_name}")
