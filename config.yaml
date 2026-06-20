@@ -1,0 +1,42 @@
+# Configuration for Clinical Text Entity Extraction in Databricks
+
+dataset:
+  name: "ncbi/ncbi_disease"
+  cache_dir: "/dbfs/tmp/ncbi_disease_cache"
+  num_labels: 3
+  labels:
+    - "O"
+    - "B-Disease"
+    - "I-Disease"
+
+bert_model:
+  name: "emilyalsentzer/Bio_ClinicalBERT"
+  num_epochs: 3
+  batch_size: 16
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  max_length: 256
+  mlflow_experiment_name: "/Shared/clinical_bert_ner"
+
+lora_model:
+  name: "Qwen/Qwen2.5-1.5B-Instruct"
+  num_epochs: 3
+  batch_size: 4
+  micro_batch_size: 2
+  learning_rate: 1e-4
+  max_length: 512
+  mlflow_experiment_name: "/Shared/clinical_llm_lora_ner"
+  lora:
+    r: 8
+    lora_alpha: 16
+    lora_dropout: 0.05
+    target_modules:
+      - "q_proj"
+      - "k_proj"
+      - "v_proj"
+      - "o_proj"
+      - "gate_proj"
+      - "up_proj"
+      - "down_proj"
+    bias: "none"
+    task_type: "CAUSAL_LM"
