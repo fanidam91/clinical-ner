@@ -287,10 +287,23 @@ with mlflow.start_run(run_name="bert_ner_run") as run:
         registered_name = "clinical_bert_ner_model"
         print(f"Registering model to Workspace Registry: {registered_name}")
 
+    # Infer model signature for Unity Catalog compatibility
+    from mlflow.models import infer_signature
+    dummy_input = {
+        "input_ids": np.zeros((1, 128), dtype=np.int32),
+        "attention_mask": np.zeros((1, 128), dtype=np.int32)
+    }
+    with torch.no_grad():
+        dummy_in_ids = torch.tensor(dummy_input["input_ids"]).to(device)
+        dummy_att_mask = torch.tensor(dummy_input["attention_mask"]).to(device)
+        dummy_out = model(input_ids=dummy_in_ids, attention_mask=dummy_att_mask).logits.cpu().numpy()
+    signature = infer_signature(dummy_input, dummy_out)
+
     # Log and register the PyTorch model
     mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path="model",
-        registered_model_name=registered_name
+        registered_model_name=registered_name,
+        signature=signature
     )
     print(f"Training finished. Model successfully registered as: {registered_name}")

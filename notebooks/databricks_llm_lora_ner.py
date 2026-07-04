@@ -6,7 +6,7 @@
 # MAGIC It uses **LoRA** and **QLoRA** (if GPU is available) and logs all training details directly to MLflow.
 
 # COMMAND ----------
-# MAGIC %pip install mlflow transformers peft datasets accelerate bitsandbytes pyyaml jinja2
+# MAGIC %pip install mlflow seqeval transformers peft datasets accelerate bitsandbytes pyyaml jinja2
 
 # COMMAND ----------
 import os
@@ -306,10 +306,17 @@ with mlflow.start_run(run_name="llm_lora_run") as run:
         registered_name = "clinical_llm_lora_model"
         print(f"Registering model adapter to Workspace Registry: {registered_name}")
 
+    # Infer model signature for Unity Catalog compatibility
+    from mlflow.models import infer_signature
+    dummy_input = ["Extract diseases from this text: The patient has breast cancer and diabetes."]
+    dummy_output = ["breast cancer, diabetes"]
+    signature = infer_signature(dummy_input, dummy_output)
+
     # Save/register the LoRA model adapter
     mlflow.pytorch.log_model(
         pytorch_model=trainer.model,
         artifact_path="lora_adapter",
-        registered_model_name=registered_name
+        registered_model_name=registered_name,
+        signature=signature
     )
     print(f"Training finished. LoRA adapter successfully registered as: {registered_name}")
