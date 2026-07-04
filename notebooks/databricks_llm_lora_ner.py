@@ -76,8 +76,31 @@ if use_unity_catalog:
 # MAGIC ### Step 2: Load Dataset and Initialize Tokenizer
 
 # COMMAND ----------
-raw_datasets = load_dataset("ncbi/ncbi_disease")
-labels_list = raw_datasets["train"].features["ner_tags"].feature.names
+# Load NCBI Disease Dataset from Hugging Face Parquet conversion branch (script-less)
+from huggingface_hub import HfApi, hf_hub_download
+from datasets import load_dataset
+import os
+
+print("Downloading Parquet dataset files from Hugging Face...")
+api = HfApi()
+repo_files = api.list_repo_files(repo_id="ncbi/ncbi_disease", repo_type="dataset", revision="refs/convert/parquet")
+parquet_files = [f for f in repo_files if f.endswith(".parquet")]
+
+local_paths = {}
+for f in parquet_files:
+    local_path = hf_hub_download(
+        repo_id="ncbi/ncbi_disease",
+        filename=f,
+        repo_type="dataset",
+        revision="refs/convert/parquet"
+    )
+    split = f.split("/")[1]
+    if split not in local_paths:
+        local_paths[split] = []
+    local_paths[split].append(local_path)
+
+raw_datasets = load_dataset("parquet", data_files=local_paths)
+labels_list = ["O", "B-Disease", "I-Disease"]
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 if tokenizer.pad_token_id is None:
