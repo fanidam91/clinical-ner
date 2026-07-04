@@ -60,6 +60,15 @@ use_unity_catalog = dbutils.widgets.get("use_unity_catalog") == "true"
 unity_catalog_name = dbutils.widgets.get("unity_catalog_name")
 unity_catalog_schema = dbutils.widgets.get("unity_catalog_schema")
 
+# CPU Safeguard: Auto-override model and batch sizing to fit in 16GB RAM
+import torch
+cuda_available = torch.cuda.is_available()
+if not cuda_available:
+    print("CPU environment detected. Applying automatic safeguards to prevent OOM...")
+    model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+    batch_size = 1
+    epochs = 1
+
 print(f"Model Name: {model_name}")
 print(f"Learning Rate: {learning_rate}")
 print(f"Batch Size: {batch_size}")
@@ -188,7 +197,7 @@ training_args = TrainingArguments(
     overwrite_output_dir=True,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
-    gradient_accumulation_steps=2,
+    gradient_accumulation_steps=8 if not cuda_available else 2,  # Compensate for batch_size=1
     learning_rate=learning_rate,
     num_train_epochs=epochs,
     logging_steps=10,
@@ -196,7 +205,8 @@ training_args = TrainingArguments(
     eval_strategy="epoch",
     report_to="mlflow",
     dataloader_drop_last=False,
-    optim="adafactor",  # Drastically reduces optimizer state memory footprint
+    optim="adafactor",
+    gradient_checkpointing=True if not cuda_available else False,  # Save activation memory!
     # Use CPU/FP32 if CUDA is not available
     fp16=cuda_available,
     bf16=False
