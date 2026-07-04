@@ -329,6 +329,7 @@ with mlflow.start_run(run_name="llm_lora_run") as run:
         pytorch_model=trainer.model,
         artifact_path="lora_adapter",
         registered_model_name=registered_name,
-        signature=signature
+        signature=signature,
+        serialization_format="pickle"
     )
     print(f"Training finished. LoRA adapter successfully registered as: {registered_name}")

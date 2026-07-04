@@ -304,6 +304,7 @@ with mlflow.start_run(run_name="bert_ner_run") as run:
         pytorch_model=model,
         artifact_path="model",
         registered_model_name=registered_name,
-        signature=signature
+        signature=signature,
+        serialization_format="pickle"
     )
     print(f"Training finished. Model successfully registered as: {registered_name}")
