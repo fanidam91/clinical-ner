@@ -100,6 +100,16 @@ for f in parquet_files:
     local_paths[split].append(local_path)
 
 raw_datasets = load_dataset("parquet", data_files=local_paths)
+
+# Auto-scale dataset for fast CPU runs if GPU is not available
+cuda_available = torch.cuda.is_available()
+if not cuda_available:
+    print("CPU detected. Downscaling dataset size and epochs for a fast run...")
+    raw_datasets["train"] = raw_datasets["train"].select(range(min(400, len(raw_datasets["train"]))))
+    raw_datasets["validation"] = raw_datasets["validation"].select(range(min(100, len(raw_datasets["validation"]))))
+    raw_datasets["test"] = raw_datasets["test"].select(range(min(50, len(raw_datasets["test"]))))
+    epochs = 1  # Force 1 epoch
+
 labels_list = ["O", "B-Disease", "I-Disease"]
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)

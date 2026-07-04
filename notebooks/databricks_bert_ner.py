@@ -88,6 +88,19 @@ for f in parquet_files:
     local_paths[split].append(local_path)
 
 raw_datasets = load_dataset("parquet", data_files=local_paths)
+
+# Auto-scale dataset for fast CPU runs if GPU is not available
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if device.type == "cpu":
+    print("CPU detected. Downscaling dataset size and epochs for a fast run...")
+    raw_datasets["train"] = raw_datasets["train"].select(range(min(800, len(raw_datasets["train"]))))
+    raw_datasets["validation"] = raw_datasets["validation"].select(range(min(200, len(raw_datasets["validation"]))))
+    epochs = 1  # Force 1 epoch
+    print_interval = 5
+else:
+    print_interval = 20
+
 labels_list = ["O", "B-Disease", "I-Disease"]
 num_labels = len(labels_list)
 print("Labels list:", labels_list)
@@ -175,7 +188,7 @@ with mlflow.start_run(run_name="bert_ner_run") as run:
             
             train_loss += loss.item()
             
-            if step % 20 == 0:
+            if step % print_interval == 0:
                 print(f"  Step {step}/{len(train_dataloader)} | Train Loss: {loss.item():.4f}")
                 
         avg_train_loss = train_loss / len(train_dataloader)
