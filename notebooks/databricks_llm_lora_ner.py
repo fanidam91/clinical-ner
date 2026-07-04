@@ -193,7 +193,7 @@ training_args = TrainingArguments(
     num_train_epochs=epochs,
     logging_steps=10,
     save_strategy="epoch",
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
     report_to="mlflow",
     dataloader_drop_last=False,
     # Use CPU/FP32 if CUDA is not available
