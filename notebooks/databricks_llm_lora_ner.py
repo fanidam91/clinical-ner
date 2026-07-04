@@ -36,7 +36,7 @@ from src.evaluation_helpers import compute_generative_metrics
 # MAGIC ### Step 1: Create Databricks Widgets for Parameters
 
 # COMMAND ----------
-dbutils.widgets.text("model_name", "Qwen/Qwen2.5-1.5B-Instruct", "Hugging Face Model")
+dbutils.widgets.text("model_name", "Qwen/Qwen2.5-0.5B-Instruct", "Hugging Face Model")
 dbutils.widgets.text("learning_rate", "1e-4", "Learning Rate")
 dbutils.widgets.text("batch_size", "4", "Batch Size")
 dbutils.widgets.text("epochs", "3", "Epochs")
@@ -196,6 +196,7 @@ training_args = TrainingArguments(
     eval_strategy="epoch",
     report_to="mlflow",
     dataloader_drop_last=False,
+    optim="adafactor",  # Drastically reduces optimizer state memory footprint
     # Use CPU/FP32 if CUDA is not available
     fp16=cuda_available,
     bf16=False
