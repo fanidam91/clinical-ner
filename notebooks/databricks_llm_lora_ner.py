@@ -183,6 +183,7 @@ peft_config = LoraConfig(
 )
 
 model = get_peft_model(model, peft_config)
+model.enable_input_require_grads()
 model.print_trainable_parameters()
 
 # COMMAND ----------
